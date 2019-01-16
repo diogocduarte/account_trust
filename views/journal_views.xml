@@ -1,0 +1,25 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+
+    <record id="account_journal_dashboard_kanban_view_inherit_account_trust" model="ir.ui.view">
+        <field name="name">account.journal.dashboard.kanban</field>
+        <field name="model">account.journal</field>
+        <field name="inherit_id" ref="account.account_journal_dashboard_kanban_view"/>
+        <field name="arch" type="xml">
+            <xpath expr="//field[@name='show_on_dashboard']" position="after">
+                <field name="is_trust_account"/>
+            </xpath>
+            <xpath expr="//t[@t-name='JournalManage']/div/div[2]"
+                   position="inside">
+                <t t-value="record.is_trust_account.raw_value" t-set="is_trust_account"/>
+                <t t-if="is_trust_account">
+                    <div>
+                        <a role="menuitem" type="object" name="open_collect_money_trust">Trust Deposit</a>
+                    </div>
+                </t>
+            </xpath>
+
+        </field>
+    </record>
+
+</odoo>
