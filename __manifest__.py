@@ -11,13 +11,14 @@ Odoo Trust Fund / Escrow Accounting
 
     """,
     'website': 'http://www.odoogap.com',
-    'depends': ['account'],
+    'depends': ['base', 'account_accountant'],
     'category': 'Invoicing Management',
     'data': [
         'views/journal_views.xml',
         'views/res_company_views.xml'
     ],
-    'test': [
+    'demo': [
+        'demo/demo_data.xml',
     ],
     'installable': True,
     'application': True,

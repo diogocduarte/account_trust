@@ -9,13 +9,15 @@ class ResCompany(models.Model):
 
     account_trust_id = fields.Many2one('account.account', string="Trust Account",
         domain="[('internal_type', '=', 'other'), ('deprecated', '=', False)]",
-        help="This account will be used instead of the default one as the receivable account for the current partner")
+        help="This account will be used as counterpart for the receivings on the trust accounts.")
 
 
 class AccountJournal(models.Model):
     _inherit = "account.journal"
 
-    is_trust_account = fields.Boolean('Is a Trust Account?', help="This is a technical field")
+    is_trust_account = fields.Boolean('Is a Escrow/Trust Account?', help="This is a technical field")
+    trust_payment_journal_id = fields.Many2one('account.journal', string='Trust Payment Journal',
+                                               domain=[('type', 'in', ('bank', 'cash'))])
 
     @api.multi
     def open_collect_money_trust(self):
@@ -43,5 +45,14 @@ class AccountPayment(models.Model):
     def _compute_destination_account_id(self):
         res = super(AccountPayment, self)._compute_destination_account_id()
         is_trust_deposit = self._context.get('trust_deposit')
+
+        print(is_trust_deposit, self.env.user.company_id.account_trust_id)
+
         if is_trust_deposit:
-            self.destination_account_id = self.company_id.account_trust_id.id
+            self.destination_account_id = self.env.user.company_id.account_trust_id.id
+
+    #
+    # def _create_payment_entry(self, amount):
+    #     """ Create a journal entry corresponding to a payment, if the payment references invoice(s) they are reconciled.
+    #         Return the journal entry.
+    #     """
