@@ -25,6 +25,12 @@ class AccountJournal(models.Model):
         action['context'].update({'trust_deposit': True})
         return action
 
+    @api.multi
+    def open_spend_money_trust(self):
+        action = self.open_payments_action('outbound')
+        action['context'].update({'trust_withdraw': True})
+        return action
+
 
 class AccountChartTemplate(models.Model):
     _inherit = "account.chart.template"
@@ -42,8 +48,9 @@ class AccountPayment(models.Model):
     def post(self):
         res = super(AccountPayment, self).post()
         is_trust_deposit = self._context.get('trust_deposit')
+        is_trust_withdraw = self._context.get('trust_withdraw')
         for recv in self:
-            if is_trust_deposit:
+            if is_trust_deposit or is_trust_withdraw:
                 if not recv.partner_id:
                     raise UserError(_("You need to select a partner"))
                 if not recv.company_id.account_trust_id:
@@ -54,5 +61,7 @@ class AccountPayment(models.Model):
     def _compute_destination_account_id(self):
         super(AccountPayment, self)._compute_destination_account_id()
         is_trust_deposit = self._context.get('trust_deposit')
-        if is_trust_deposit:
+        is_trust_withdraw = self._context.get('trust_withdraw')
+
+        if is_trust_deposit or is_trust_withdraw:
             self.destination_account_id = self.env.user.company_id.account_trust_id.id
