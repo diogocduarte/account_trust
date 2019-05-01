@@ -9,16 +9,55 @@
             <xpath expr="//field[@name='show_on_dashboard']" position="after">
                 <field name="is_trust_account"/>
             </xpath>
-            <xpath expr="//t[@t-name='JournalManage']/div/div[2]"
-                   position="inside">
-                <t t-value="record.is_trust_account.raw_value" t-set="is_trust_account"/>
-                <t t-if="is_trust_account">
-                    <div>
-                        <a role="menuitem" type="object" name="open_collect_money_trust">Trust Deposit</a>
+            <xpath expr="//t[@t-name='JournalManage']/div/div[2]" position="replace">
+                <div class="col-xs-4 o_kanban_card_manage_section o_kanban_manage_new">
+                    <t t-value="record.is_trust_account.raw_value" t-set="is_trust_account_flag"/>
+                    <div class="o_kanban_card_manage_title">
+                        <span>New</span>
                     </div>
-                </t>
-            </xpath>
+                    <t t-if="is_trust_account_flag != true">
+                        <div name="bank_cash_commands">
+                            <t t-if="journal_type == 'bank'">
+                                <a type="object" name="create_bank_statement">Transaction</a>
+                            </t>
+                            <t t-if="journal_type == 'cash'">
+                                <a type="object" name="create_cash_statement">Transaction</a>
+                            </t>
+                        </div>
+                        <div>
+                            <a type="object" name="open_spend_money">Send Money</a>
+                        </div>
+                        <div>
+                            <a type="object" name="open_collect_money">Receive Money</a>
+                        </div>
+                        <div>
+                            <a type="object" name="open_transfer_money">Internal Transfer</a>
+                        </div>
+                    </t>
 
+                    <t t-if="is_trust_account_flag">
+                        <div>
+                            <a role="menuitem" type="object" name="open_collect_money_trust">Trust Deposit</a>
+                        </div>
+                    </t>
+                </div>
+            </xpath>
+        </field>
+    </record>
+
+    <record id="view_account_journal_pos_user_form" model="ir.ui.view">
+        <field name="name">account.journal.pos.user.form.inherit</field>
+        <field name="model">account.journal</field>
+        <field name="inherit_id" ref="account.view_account_journal_form"/>
+        <field name="arch" type="xml">
+            <xpath expr="//notebook[last()]" position="inside">
+                <page string="Trust" attrs="{'invisible': [('type','not in',['bank','cash'])]}">
+                    <group>
+                        <field name="is_trust_account"/>
+                        <field name="trust_payment_journal_id" attrs="{'invisible': [('is_trust_account','=', False)]}"/>
+                    </group>
+                </page>
+            </xpath>
         </field>
     </record>
 

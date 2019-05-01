@@ -16,14 +16,23 @@ class AccountJournal(models.Model):
     _inherit = "account.journal"
 
     is_trust_account = fields.Boolean('Is a Escrow/Trust Account?', help="This is a technical field")
-    trust_payment_journal_id = fields.Many2one('account.journal', string='Trust Payment Journal',
-                                               domain=[('type', 'in', ('bank', 'cash'))])
+    trust_payment_journal_id = fields.Many2one('account.journal', string='In Bank Account', domain=[('type', '=', 'bank')],
+                                    help="Bank account used for collecting customer payments")
 
     @api.multi
     def open_collect_money_trust(self):
-        action = self.open_payments_action('inbound', mode='form')
+        action = self.open_payments_action('inbound')
         action['context'].update({'trust_deposit': True})
         return action
+
+
+class AccountChartTemplate(models.Model):
+    _inherit = "account.chart.template"
+
+    @api.model
+    def generate_journals(self, acc_template_ref, company, journals_dict=None):
+        journal_to_add = [{'name': _('Trust Fund'), 'type': 'bank', 'code': 'TRS', 'favorite': True, 'sequence': 9, 'is_trust_account': True}]
+        return super(AccountChartTemplate, self).generate_journals(acc_template_ref=acc_template_ref, company=company, journals_dict=journal_to_add)
 
 
 class AccountPayment(models.Model):
@@ -43,16 +52,7 @@ class AccountPayment(models.Model):
         return res
 
     def _compute_destination_account_id(self):
-        res = super(AccountPayment, self)._compute_destination_account_id()
+        super(AccountPayment, self)._compute_destination_account_id()
         is_trust_deposit = self._context.get('trust_deposit')
-
-        print(is_trust_deposit, self.env.user.company_id.account_trust_id)
-
         if is_trust_deposit:
             self.destination_account_id = self.env.user.company_id.account_trust_id.id
-
-    #
-    # def _create_payment_entry(self, amount):
-    #     """ Create a journal entry corresponding to a payment, if the payment references invoice(s) they are reconciled.
-    #         Return the journal entry.
-    #     """
