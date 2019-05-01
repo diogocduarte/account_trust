@@ -36,7 +36,7 @@
                     </t>
 
                     <t t-if="is_trust_account_flag">
-                        <div>
+                        <div name="trust_operations">
                             <a role="menuitem" type="object" name="open_collect_money_trust">Deposit trust funds</a>
                             <a role="menuitem" type="object" name="open_spend_money_trust">Withdraw trust funds</a>
                         </div>
