@@ -56,6 +56,7 @@
                     <group>
                         <field name="is_trust_account"/>
                         <field name="trust_payment_journal_id" attrs="{'invisible': [('is_trust_account','=', False)]}"/>
+                        <field name="trust_bank_journal_id" attrs="{'invisible': [('is_trust_account','=', False)]}"/>
                     </group>
                 </page>
             </xpath>

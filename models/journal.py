@@ -18,6 +18,8 @@ class AccountJournal(models.Model):
     is_trust_account = fields.Boolean('Is a Escrow/Trust Account?', help="This is a technical field")
     trust_payment_journal_id = fields.Many2one('account.journal', string='In Bank Account', domain=[('type', '=', 'bank')],
                                     help="Bank account used for collecting customer payments")
+    trust_bank_journal_id = fields.Many2one('account.journal', string='Checks Bank Account', domain=[('type', '=', 'bank')],
+                                    help="Bank account used for registering the checks for the trust.")
 
     @api.multi
     def open_collect_money_trust(self):
@@ -64,4 +66,7 @@ class AccountPayment(models.Model):
         is_trust_withdraw = self._context.get('trust_withdraw')
 
         if is_trust_deposit or is_trust_withdraw:
-            self.destination_account_id = self.env.user.company_id.account_trust_id.id
+            if self.journal_id.trust_payment_journal_id:
+                self.destination_account_id = self.journal_id.trust_payment_journal_id.id
+            else:
+                self.destination_account_id = self.env.user.company_id.account_trust_id.id
