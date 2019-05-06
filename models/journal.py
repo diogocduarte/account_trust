@@ -39,7 +39,8 @@ class AccountChartTemplate(models.Model):
 
     @api.model
     def generate_journals(self, acc_template_ref, company, journals_dict=None):
-        journal_to_add = [{'name': _('Trust Fund'), 'type': 'bank', 'code': 'TRS', 'favorite': True, 'sequence': 9, 'is_trust_account': True}]
+        print acc_template_ref, company, journals_dict
+        # journal_to_add = [{'name': _('Trust Fund'), 'type': 'bank', 'code': 'TRS', 'favorite': True, 'sequence': 9, 'is_trust_account': True}]
         return super(AccountChartTemplate, self).generate_journals(acc_template_ref=acc_template_ref, company=company, journals_dict=journal_to_add)
 
 
@@ -66,7 +67,7 @@ class AccountPayment(models.Model):
         is_trust_withdraw = self._context.get('trust_withdraw')
 
         if is_trust_deposit or is_trust_withdraw:
-            if self.journal_id.trust_payment_journal_id:
-                self.destination_account_id = self.journal_id.trust_payment_journal_id.id
+            if self.journal_id.trust_bank_journal_id:
+                self.destination_account_id = self.journal_id.trust_bank_journal_id.default_debit_account_id.id
             else:
                 self.destination_account_id = self.env.user.company_id.account_trust_id.id
