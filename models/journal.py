@@ -16,10 +16,10 @@ class AccountJournal(models.Model):
     _inherit = "account.journal"
 
     is_trust_account = fields.Boolean('Is a Escrow/Trust Account?', help="This is a technical field")
-    trust_payment_journal_id = fields.Many2one('account.journal', string='In Bank Account', domain=[('type', '=', 'bank')],
+    trust_payment_journal_id = fields.Many2one('account.journal', string='AR Bank Account', domain=[('type', '=', 'bank')],
                                     help="Bank account used for collecting customer payments")
-    trust_bank_journal_id = fields.Many2one('account.journal', string='Checks Bank Account', domain=[('type', '=', 'bank')],
-                                    help="Bank account used for registering the checks for the trust.")
+    trust_checks_journal_id = fields.Many2one('account.journal', string='Checks Bank Account', domain=[('type', '=', 'bank')],
+                                    help="Bank account used for registering the checks or cash for the trust.")
 
     @api.multi
     def open_collect_money_trust(self):
@@ -52,7 +52,9 @@ class AccountPayment(models.Model):
         res = super(AccountPayment, self).post()
         is_trust_deposit = self._context.get('trust_deposit')
         is_trust_withdraw = self._context.get('trust_withdraw')
+        print "--", res
         for recv in self:
+            print "--", recv.read()
             if is_trust_deposit or is_trust_withdraw:
                 if not recv.partner_id:
                     raise UserError(_("You need to select a partner"))
@@ -63,11 +65,9 @@ class AccountPayment(models.Model):
 
     def _compute_destination_account_id(self):
         super(AccountPayment, self)._compute_destination_account_id()
-        is_trust_deposit = self._context.get('trust_deposit')
-        is_trust_withdraw = self._context.get('trust_withdraw')
-
-        if is_trust_deposit or is_trust_withdraw:
-            if self.journal_id.trust_bank_journal_id:
-                self.destination_account_id = self.journal_id.trust_bank_journal_id.default_debit_account_id.id
-            else:
-                self.destination_account_id = self.env.user.company_id.account_trust_id.id
+        # If it is a trust account type and has checks or cash origin account
+        if self.journal_id.is_trust_account and self.journal_id.trust_checks_journal_id:
+            self.destination_account_id = self.journal_id.trust_checks_journal_id.default_debit_account_id.id
+        # If it is a trust account type
+        elif self.journal_id.is_trust_account:
+            self.destination_account_id = self.env.user.company_id.account_trust_id.id
