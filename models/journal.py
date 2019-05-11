@@ -22,40 +22,103 @@ class AccountJournal(models.Model):
                                     help="Bank account used for registering the checks or cash for the trust.")
 
     @api.multi
+    def open_collect_passthrough_money_trust(self):
+        action = self.open_payments_action('inbound')
+        action['context'].update({'trust_action': True, 'target_journal_id': self.id})
+        action['views'] = [[self.env.ref('account_trust.view_trust_account_payment_tree').id, 'tree']]
+        for jr in self:
+            if jr.trust_checks_journal_id:
+                action['domain'] = [
+                    ('journal_id', '=', jr.trust_checks_journal_id.id),
+                    ('payment_type', '=', 'inbound'),
+                    ('is_deposited', '=', False)
+                ]
+        return action
+
+    @api.multi
     def open_collect_money_trust(self):
         action = self.open_payments_action('inbound')
-        action['context'].update({'trust_deposit': True})
+        action['context'].update({'trust_action': True})
         return action
 
     @api.multi
     def open_spend_money_trust(self):
         action = self.open_payments_action('outbound')
-        action['context'].update({'trust_withdraw': True})
+        action['context'].update({'trust_action': True})
+        return action
+
+    @api.multi
+    def open_trust_ar(self):
+        action = self.open_payments_action('to_receivables')
+        action['context'].update({'trust_action': True})
         return action
 
 
 class AccountChartTemplate(models.Model):
     _inherit = "account.chart.template"
 
-    @api.model
-    def generate_journals(self, acc_template_ref, company, journals_dict=None):
-        print acc_template_ref, company, journals_dict
-        # journal_to_add = [{'name': _('Trust Fund'), 'type': 'bank', 'code': 'TRS', 'favorite': True, 'sequence': 9, 'is_trust_account': True}]
-        return super(AccountChartTemplate, self).generate_journals(acc_template_ref=acc_template_ref, company=company, journals_dict=journal_to_add)
+    # @api.model
+    # def generate_journals(self, acc_template_ref, company, journals_dict=None):
+    #     print acc_template_ref, company, journals_dict
+    #     journal_to_add = [{'name': _('Trust Fund'), 'type': 'bank', 'code': 'TRS', 'favorite': True, 'sequence': 9, 'is_trust_account': True}]
+    #     return super(AccountChartTemplate, self).generate_journals(acc_template_ref=acc_template_ref, company=company, journals_dict=journal_to_add)
 
 
 class AccountPayment(models.Model):
     _inherit = "account.payment"
 
+    @api.model
+    def _default_payment_type(self):
+        """ This routine will generate the selection """
+        is_trust_action = self._context.get('trust_action')
+
+        sel = [('outbound', 'Send Money'),
+               ('inbound', 'Receive Money'),
+               ('transfer', 'Internal Transfer'),
+               ('to_receivables', 'To Customer Invoices'),
+               ('to_payables', 'To Supplier Bills')]
+
+        if not is_trust_action:
+            sel.remove(('to_receivables', 'To Customer Invoices'))
+            sel.remove(('to_payables', 'To Supplier Bills'))
+        else:
+            sel.remove(('transfer', 'Internal Transfer'))
+
+        return sel
+
+    payment_type = fields.Selection('_default_payment_type', string='Payment Type', required=True)
+    is_deposited = fields.Boolean('Is Deposited?', help="This is a technical field, means the check is deposited on the passthrough account")
+
+    @api.multi
+    def deposit_check_cash(self):
+        target_journal_id = self._context.get('target_journal_id')
+        if not target_journal_id:
+            raise UserError(_("There is no target journal defined"))
+        for jr in self:
+            Payment = self.env['account.payment']
+            payment = Payment.create({
+                'amount': jr.amount,
+                'anva_trx_id': jr.anva_trx_id and jr.anva_trx_id.id or False,
+                'company_id': jr.company_id.id,
+                'journal_id': target_journal_id,
+                'partner_id': jr.partner_id.id,
+                'partner_type': jr.partner_type,
+                'payment_type': jr.payment_type,
+                'payment_method_id': jr.payment_method_id.id,
+                'project_id': jr.project_id.id,
+                'payment_reference': jr.payment_reference,
+                'payment_method_code': 'manual',
+            })
+            payment.post()
+            jr.is_deposited = True
+
+        return payment.journal_id.open_collect_passthrough_money_trust()
+
     @api.multi
     def post(self):
         res = super(AccountPayment, self).post()
-        is_trust_deposit = self._context.get('trust_deposit')
-        is_trust_withdraw = self._context.get('trust_withdraw')
-        print "--", res
         for recv in self:
-            print "--", recv.read()
-            if is_trust_deposit or is_trust_withdraw:
+            if self.journal_id.is_trust_account:
                 if not recv.partner_id:
                     raise UserError(_("You need to select a partner"))
                 if not recv.company_id.account_trust_id:

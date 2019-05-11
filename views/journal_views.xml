@@ -1,6 +1,8 @@
 <?xml version="1.0" encoding="utf-8"?>
 <odoo>
 
+    <!-- Account Journal -->
+
     <record id="account_journal_dashboard_kanban_view_inherit_account_trust" model="ir.ui.view">
         <field name="name">account.journal.dashboard.kanban</field>
         <field name="model">account.journal</field>
@@ -8,6 +10,7 @@
         <field name="arch" type="xml">
             <xpath expr="//field[@name='show_on_dashboard']" position="after">
                 <field name="is_trust_account"/>
+                <field name="trust_checks_journal_id"/>
             </xpath>
             <xpath expr="//t[@t-name='JournalManage']/div/div[2]" position="replace">
                 <div class="col-xs-4 o_kanban_card_manage_section o_kanban_manage_new">
@@ -36,18 +39,27 @@
                     </t>
 
                     <t t-if="is_trust_account_flag">
-                        <div name="trust_operations">
-                            <a role="menuitem" type="object" name="open_collect_money_trust">Deposit trust funds</a>
-                            <a role="menuitem" type="object" name="open_spend_money_trust">Withdraw trust funds</a>
-                        </div>
+                        <t t-if="!record.trust_checks_journal_id.raw_value">
+                            <div name="trust_operations">
+                                <a role="menuitem" type="object" name="open_collect_money_trust">Deposit trust funds</a>
+                                <a role="menuitem" type="object" name="open_spend_money_trust">Withdraw trust funds</a>
+                            </div>
+                        </t>
+                        <t t-if="record.trust_checks_journal_id.raw_value">
+                            <div name="trust_operations">
+                                <a role="menuitem" type="object" name="open_collect_passthrough_money_trust">Deposit trust funds</a>
+                                <a role="menuitem" type="object" name="open_collect_money_trust">View trust funds</a>
+                            </div>
+                        </t>
+
                     </t>
                 </div>
             </xpath>
         </field>
     </record>
 
-    <record id="view_account_journal_pos_user_form" model="ir.ui.view">
-        <field name="name">account.journal.pos.user.form.inherit</field>
+    <record id="view_account_journal_account_trust_form" model="ir.ui.view">
+        <field name="name">account.journal.account.trust.form.inherit</field>
         <field name="model">account.journal</field>
         <field name="inherit_id" ref="account.view_account_journal_form"/>
         <field name="arch" type="xml">
@@ -60,6 +72,40 @@
                     </group>
                 </page>
             </xpath>
+        </field>
+    </record>
+
+    <!-- Account Payment -->
+
+    <record id="payment_form_inherit_trust" model="ir.ui.view">
+        <field name="name">payment.form.inherit.trust</field>
+        <field name="model">account.payment</field>
+        <field name="inherit_id" ref="account.view_account_payment_form"/>
+        <field name="arch" type="xml">
+            <xpath expr="//field[@name='payment_type']" position="before">
+                <field name="is_deposited" readonly="1" attrs="{'invisible':[('is_deposited','=',False)]}"/>
+            </xpath>
+        </field>
+    </record>
+
+    <record id="view_trust_account_payment_tree" model="ir.ui.view">
+        <field name="name">account.payment.tree</field>
+        <field name="model">account.payment</field>
+        <field name="arch" type="xml">
+            <tree decoration-info="state=='draft'" decoration-muted="state=='reconciled'" edit="false" create="false">
+                <field name="payment_date"/>
+                <field name="name"/>
+                <field name="journal_id"/>
+                <field name="payment_method_id"/>
+                <field name="partner_id" string="Customer"/>
+                <field name="amount" sum="Amount"/>
+                <button name="deposit_check_cash" type="object" icon="fa-arrow-right" string="Deposit check or cash amount"/>
+                <field name="state"/>
+                <field name="company_id" groups="base.group_multi_company"/>
+                <field name="currency_id" invisible="1"/>
+                <field name="partner_type" invisible="1"/>
+                <field name="is_deposited" invisible="1"/>
+            </tree>
         </field>
     </record>
 
