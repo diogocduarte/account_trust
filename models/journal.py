@@ -116,14 +116,18 @@ class AccountPayment(models.Model):
 
     @api.multi
     def post(self):
-        res = super(AccountPayment, self).post()
+
         for recv in self:
             if self.journal_id.is_trust_account:
+                if not (recv.journal_id.trust_payment_journal_id and recv.journal_id.is_trust_account):
+                    raise UserError(_("You cannot use an undeposited checks/cash account for paying invoices."))
                 if not recv.partner_id:
-                    raise UserError(_("You need to select a partner"))
+                    raise UserError(_("No partner is selected, please select one."))
                 if not recv.company_id.account_trust_id:
                     raise UserError(_("You need to set a trust account in company form.\n"
                                       "Please go to Settings >> Companies and chose an account."))
+        res = super(AccountPayment, self).post()
+
         return res
 
     def _compute_destination_account_id(self):
