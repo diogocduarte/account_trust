@@ -2,6 +2,7 @@
 
 from odoo import api, fields, models, _
 from odoo.exceptions import UserError
+from odoo.osv import expression
 
 
 class ResCompany(models.Model):
@@ -31,6 +32,7 @@ class AccountJournal(models.Model):
                 action['domain'] = [
                     ('journal_id', '=', jr.trust_checks_journal_id.id),
                     ('payment_type', '=', 'inbound'),
+                    ('state', '!=', 'draft'),
                     ('is_deposited', '=', False)
                 ]
         return action
@@ -66,6 +68,18 @@ class AccountChartTemplate(models.Model):
 
 class AccountPayment(models.Model):
     _inherit = "account.payment"
+
+    @api.onchange('payment_type')
+    def _onchange_payment_type(self):
+        if hasattr(super(AccountPayment, self), '_onchange_payment_type'):
+            res = super(AccountPayment, self)._onchange_payment_type()
+            if self.invoice_ids:
+                domain = res['domain']['journal_id']
+                domain = expression.AND([[('is_trust_account', '=', True), ('trust_payment_journal_id', '!=', False)], domain]) #
+                domain = expression.OR([[('is_trust_account', '=', False)], domain]) #
+                res['domain']['journal_id'] = domain
+
+        return res
 
     @api.model
     def _default_payment_type(self):
@@ -116,25 +130,36 @@ class AccountPayment(models.Model):
 
     @api.multi
     def post(self):
-
         for recv in self:
             if self.journal_id.is_trust_account:
-                if not (recv.journal_id.trust_payment_journal_id and recv.journal_id.is_trust_account):
-                    raise UserError(_("You cannot use an undeposited checks/cash account for paying invoices."))
-                if not recv.partner_id:
-                    raise UserError(_("No partner is selected, please select one."))
-                if not recv.company_id.account_trust_id:
-                    raise UserError(_("You need to set a trust account in company form.\n"
-                                      "Please go to Settings >> Companies and chose an account."))
+                if recv.invoice_ids:
+                    if not (recv.journal_id.trust_payment_journal_id and recv.journal_id.is_trust_account):
+                        raise UserError(_("You cannot use an undeposited checks/cash account for paying invoices."))
+                else:
+                    if not recv.partner_id:
+                        raise UserError(_("No partner is selected, please select one."))
+                    if not recv.company_id.account_trust_id:
+                        raise UserError(_("You need to set a trust account in company form.\n"
+                                          "Please go to Settings >> Companies and chose an account."))
         res = super(AccountPayment, self).post()
-
         return res
 
     def _compute_destination_account_id(self):
         super(AccountPayment, self)._compute_destination_account_id()
-        # If it is a trust account type and has checks or cash origin account
-        if self.journal_id.is_trust_account and self.journal_id.trust_checks_journal_id:
-            self.destination_account_id = self.journal_id.trust_checks_journal_id.default_debit_account_id.id
-        # If it is a trust account type
-        elif self.journal_id.is_trust_account:
-            self.destination_account_id = self.env.user.company_id.account_trust_id.id
+        print self.invoice_ids
+        if not self.invoice_ids:
+            # If it is a trust account type and has checks or cash origin account
+            if self.journal_id.is_trust_account and self.journal_id.trust_checks_journal_id:
+                self.destination_account_id = self.journal_id.trust_checks_journal_id.default_debit_account_id.id
+            # If it is a trust account type
+            elif self.journal_id.is_trust_account:
+                self.destination_account_id = self.env.user.company_id.account_trust_id.id
+
+
+class AccountInvoice(models.Model):
+    _inherit = "account.invoice"
+
+    @api.multi
+    def register_payment(self, payment_line, writeoff_acc_id=False, writeoff_journal_id=False):
+        # TODO: insert a link entry between payment and trust account
+        return super(AccountInvoice, self).register_payment(payment_line, writeoff_acc_id, writeoff_journal_id)
