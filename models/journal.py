@@ -9,18 +9,20 @@ class ResCompany(models.Model):
     _inherit = 'res.company'
 
     account_trust_id = fields.Many2one('account.account', string="Trust Account",
-        domain="[('internal_type', '=', 'other'), ('deprecated', '=', False)]",
-        help="This account will be used as counterpart for the receivings on the trust accounts.")
+                                       domain="[('internal_type', '=', 'other'), ('deprecated', '=', False)]",
+                                       help="This account will be used as counterpart for the receivings on the trust accounts.")
 
 
 class AccountJournal(models.Model):
     _inherit = "account.journal"
 
     is_trust_account = fields.Boolean('Is a Escrow/Trust Account?', help="This is a technical field")
-    trust_payment_journal_id = fields.Many2one('account.journal', string='AR Bank Account', domain=[('type', '=', 'bank')],
-                                    help="Bank account used for collecting customer payments")
-    trust_checks_journal_id = fields.Many2one('account.journal', string='Checks Bank Account', domain=[('type', '=', 'bank')],
-                                    help="Bank account used for registering the checks or cash for the trust.")
+    trust_payment_journal_id = fields.Many2one('account.journal', string='AR Bank Account',
+                                               domain=[('type', '=', 'bank')],
+                                               help="Bank account used for collecting customer payments")
+    trust_checks_journal_id = fields.Many2one('account.journal', string='Checks Bank Account',
+                                              domain=[('type', '=', 'bank')],
+                                              help="Passthrough bank account used for registering the checks or cash for the trust.")
 
     @api.multi
     def open_collect_passthrough_money_trust(self):
@@ -56,16 +58,6 @@ class AccountJournal(models.Model):
         return action
 
 
-class AccountChartTemplate(models.Model):
-    _inherit = "account.chart.template"
-
-    # @api.model
-    # def generate_journals(self, acc_template_ref, company, journals_dict=None):
-    #     print acc_template_ref, company, journals_dict
-    #     journal_to_add = [{'name': _('Trust Fund'), 'type': 'bank', 'code': 'TRS', 'favorite': True, 'sequence': 9, 'is_trust_account': True}]
-    #     return super(AccountChartTemplate, self).generate_journals(acc_template_ref=acc_template_ref, company=company, journals_dict=journal_to_add)
-
-
 class AccountPayment(models.Model):
     _inherit = "account.payment"
 
@@ -75,8 +67,9 @@ class AccountPayment(models.Model):
             res = super(AccountPayment, self)._onchange_payment_type()
             if self.invoice_ids:
                 domain = res['domain']['journal_id']
-                domain = expression.AND([[('is_trust_account', '=', True), ('trust_payment_journal_id', '!=', False)], domain]) #
-                domain = expression.OR([[('is_trust_account', '=', False)], domain]) #
+                domain = expression.AND(
+                    [[('is_trust_account', '=', True), ('trust_payment_journal_id', '!=', False)], domain])  #
+                domain = expression.OR([[('is_trust_account', '=', False)], domain])  #
                 res['domain']['journal_id'] = domain
 
         return res
@@ -101,7 +94,8 @@ class AccountPayment(models.Model):
         return sel
 
     payment_type = fields.Selection('_default_payment_type', string='Payment Type', required=True)
-    is_deposited = fields.Boolean('Is Deposited?', help="This is a technical field, means the check is deposited on the passthrough account")
+    is_deposited = fields.Boolean('Is Deposited?',
+                                  help="This is a technical field, means the check is deposited on the passthrough account")
 
     @api.multi
     def deposit_check_cash(self):
@@ -142,17 +136,24 @@ class AccountPayment(models.Model):
                         raise UserError(_("You need to set a trust account in company form.\n"
                                           "Please go to Settings >> Companies and chose an account."))
         res = super(AccountPayment, self).post()
+
         return res
 
     def _compute_destination_account_id(self):
         super(AccountPayment, self)._compute_destination_account_id()
-        print self.invoice_ids
+        context = self._context
         if not self.invoice_ids:
             # If it is a trust account type and has checks or cash origin account
-            if self.journal_id.is_trust_account and self.journal_id.trust_checks_journal_id:
+            if self.journal_id.is_trust_account and self.journal_id.trust_checks_journal_id and not context.get(
+                    'pay_from_trust', False):
                 self.destination_account_id = self.journal_id.trust_checks_journal_id.default_debit_account_id.id
             # If it is a trust account type
-            elif self.journal_id.is_trust_account:
+            elif self.journal_id.is_trust_account and self.journal_id.trust_payment_journal_id and not context.get(
+                    'pay_from_trust', False):
+                self.destination_account_id = self.env.user.company_id.account_trust_id.id
+            # If it is a trust account type and comes from invoice payment
+            elif self.journal_id.is_trust_account and self.journal_id.trust_payment_journal_id and context.get(
+                    'pay_from_trust', False):
                 self.destination_account_id = self.env.user.company_id.account_trust_id.id
 
 
@@ -161,5 +162,28 @@ class AccountInvoice(models.Model):
 
     @api.multi
     def register_payment(self, payment_line, writeoff_acc_id=False, writeoff_journal_id=False):
-        # TODO: insert a link entry between payment and trust account
-        return super(AccountInvoice, self).register_payment(payment_line, writeoff_acc_id, writeoff_journal_id)
+        # line_to_reconcile = self.env['account.move.line']
+        # for inv in self:
+        #     line_to_reconcile += inv.move_id.line_ids.filtered(lambda r: not r.reconciled and r.account_id.internal_type in ('payable', 'receivable'))
+        # return (line_to_reconcile + payment_line).reconcile(writeoff_acc_id, writeoff_journal_id)
+
+        res = super(AccountInvoice, self).register_payment(payment_line, writeoff_acc_id, writeoff_journal_id)
+
+        # if payment_line.journal_id.is_trust_account and payment_line.journal_id.trust_payment_journal_id:
+        #     Payment = self.env['account.payment'].with_context(pay_from_trust=True)
+        #     payment = Payment.create({
+        #         'amount': payment_line.credit,
+        #         'anva_trx_id': False,
+        #         'company_id': payment_line.company_id.id,
+        #         'journal_id': payment_line.journal_id.id,
+        #         'partner_id': payment_line.partner_id.id,
+        #         'partner_type': 'customer',
+        #         'payment_type': 'inbound',
+        #         'communication': 'Pay from Trust',
+        #         'payment_method_id': self.env.ref('account.account_payment_method_manual_in').id,
+        #         'payment_reference': self.display_name + 'dd',
+        #         'payment_method_code': 'manual',
+        #     })
+        # payment.post()
+
+        return res
