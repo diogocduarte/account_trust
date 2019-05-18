@@ -11,6 +11,7 @@
             <xpath expr="//field[@name='show_on_dashboard']" position="after">
                 <field name="is_trust_account"/>
                 <field name="trust_checks_journal_id"/>
+                <field name="trust_payment_journal_id"/>
             </xpath>
 
             <!-- View tab -->
@@ -61,20 +62,29 @@
                         <span>New</span>
                     </div>
 
-                    <!-- If is a trust account -->
-                    <t t-if="is_trust_account_flag">
+                    <!-- If is a trust account - Trust Undeposited Funds -->
+                    <t t-if="is_trust_account_flag and !record.trust_checks_journal_id.raw_value and !record.trust_payment_journal_id.raw_value">
                         <t t-if="!record.trust_checks_journal_id.raw_value">
                             <div name="trust_operations_passthrough">
                                 <a role="menuitem" type="object" name="open_collect_money_trust">Deposit trust funds</a>
                             </div>
                         </t>
-                        <t t-if="record.trust_checks_journal_id.raw_value">
-                            <div name="trust_operations">
-                                <a role="menuitem" type="object" name="open_collect_passthrough_money_trust">Deposit trust funds</a>
-                                <a role="menuitem" type="object" name="open_collect_money_trust">View trust funds</a>
-                                <a role="menuitem" type="object" name="open_spend_money_trust">Withdraw trust funds</a>
-                            </div>
-                        </t>
+                    </t>
+                    <!-- If is a trust account - Trust Deposited Account Funds -->
+                    <t t-if="is_trust_account_flag and record.trust_checks_journal_id.raw_value and record.trust_payment_journal_id.raw_value">
+                        <div name="trust_operations">
+                            <a role="menuitem" type="object" name="open_collect_passthrough_money_trust">Deposit trust funds</a>
+                            <a role="menuitem" type="object" name="open_collect_money_trust">View trust funds</a>
+                            <a role="menuitem" type="object" name="open_spend_money_trust">Withdraw trust funds</a>
+                        </div>
+                    </t>
+                    <!-- If is a trust account - Trust Merchant Account Funds -->
+                    <t t-if="is_trust_account_flag and !record.trust_checks_journal_id.raw_value and record.trust_payment_journal_id.raw_value">
+                        <div name="trust_operations">
+                            <a role="menuitem" type="object" name="open_collect_passthrough_money_trust">Deposit trust funds</a>
+                            <a role="menuitem" type="object" name="open_collect_money_trust">View trust funds</a>
+                            <a role="menuitem" type="object" name="open_spend_money_trust">Withdraw trust funds</a>
+                        </div>
                     </t>
 
                     <!-- If it is not a trust account -->
