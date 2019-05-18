@@ -143,47 +143,15 @@ class AccountPayment(models.Model):
         super(AccountPayment, self)._compute_destination_account_id()
         context = self._context
         if not self.invoice_ids:
-            # If it is a trust account type and has checks or cash origin account
-            if self.journal_id.is_trust_account and self.journal_id.trust_checks_journal_id and not context.get(
-                    'pay_from_trust', False):
+
+            # If it is a trust account type and has a passthrough account (undeposited funds)
+            if self.journal_id.is_trust_account and self.journal_id.trust_checks_journal_id:
                 self.destination_account_id = self.journal_id.trust_checks_journal_id.default_debit_account_id.id
-            # If it is a trust account type
-            elif self.journal_id.is_trust_account and self.journal_id.trust_payment_journal_id and not context.get(
-                    'pay_from_trust', False):
+
+            # If it is a trust account type without passthrough (merchant)
+            elif self.journal_id.is_trust_account and self.journal_id.trust_payment_journal_id:
                 self.destination_account_id = self.env.user.company_id.account_trust_id.id
+
             # If it is a trust account type and comes from invoice payment
-            elif self.journal_id.is_trust_account and self.journal_id.trust_payment_journal_id and context.get(
-                    'pay_from_trust', False):
+            elif self.journal_id.is_trust_account and not self.journal_id.trust_checks_journal_id and not self.journal_id.trust_payment_journal_id:
                 self.destination_account_id = self.env.user.company_id.account_trust_id.id
-
-
-class AccountInvoice(models.Model):
-    _inherit = "account.invoice"
-
-    @api.multi
-    def register_payment(self, payment_line, writeoff_acc_id=False, writeoff_journal_id=False):
-        # line_to_reconcile = self.env['account.move.line']
-        # for inv in self:
-        #     line_to_reconcile += inv.move_id.line_ids.filtered(lambda r: not r.reconciled and r.account_id.internal_type in ('payable', 'receivable'))
-        # return (line_to_reconcile + payment_line).reconcile(writeoff_acc_id, writeoff_journal_id)
-
-        res = super(AccountInvoice, self).register_payment(payment_line, writeoff_acc_id, writeoff_journal_id)
-
-        # if payment_line.journal_id.is_trust_account and payment_line.journal_id.trust_payment_journal_id:
-        #     Payment = self.env['account.payment'].with_context(pay_from_trust=True)
-        #     payment = Payment.create({
-        #         'amount': payment_line.credit,
-        #         'anva_trx_id': False,
-        #         'company_id': payment_line.company_id.id,
-        #         'journal_id': payment_line.journal_id.id,
-        #         'partner_id': payment_line.partner_id.id,
-        #         'partner_type': 'customer',
-        #         'payment_type': 'inbound',
-        #         'communication': 'Pay from Trust',
-        #         'payment_method_id': self.env.ref('account.account_payment_method_manual_in').id,
-        #         'payment_reference': self.display_name + 'dd',
-        #         'payment_method_code': 'manual',
-        #     })
-        # payment.post()
-
-        return res

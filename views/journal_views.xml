@@ -12,12 +12,72 @@
                 <field name="is_trust_account"/>
                 <field name="trust_checks_journal_id"/>
             </xpath>
-            <xpath expr="//t[@t-name='JournalManage']/div/div[2]" position="replace">
+
+            <!-- View tab -->
+            <xpath expr="//div[hasclass('o_kanban_manage_view')]" position="replace">
+                <t t-value="record.is_trust_account.raw_value" t-set="is_trust_account_flag"/>
+                <div class="col-xs-4 o_kanban_card_manage_section o_kanban_manage_view">
+                    <div class="o_kanban_card_manage_title">
+                        <span>View</span>
+                    </div>
+
+                    <!-- If is a trust account -->
+                    <t t-if="is_trust_account_flag">
+                        <div>
+                            <a type="object" name="open_action" context="{'action_name': 'action_account_moves_all_a'}"
+                               groups="base.group_no_one">Journal Items
+                            </a>
+                        </div>
+                    </t>
+
+                    <!-- If it is not a trust account -->
+                    <t t-if="is_trust_account_flag != true">
+                        <div>
+                            <a type="object" name="open_action">
+                                <t t-if="journal_type == 'bank'">Bank Statements</t>
+                                <t t-if="journal_type == 'cash'">Cash Statements</t>
+                            </a>
+                        </div>
+                        <div>
+                            <a type="object" name="open_action_with_context"
+                               context="{'action_name': 'action_bank_statement_line', 'search_default_journal': True}">
+                                Search Operations
+                            </a>
+                        </div>
+                        <div>
+                            <a type="object" name="open_action" context="{'action_name': 'action_account_moves_all_a'}"
+                               groups="base.group_no_one">Journal Items
+                            </a>
+                        </div>
+                    </t>
+                </div>
+            </xpath>
+
+            <!-- New tab -->
+            <xpath expr="//div[hasclass('o_kanban_manage_new')]" position="replace">
+                <t t-value="record.is_trust_account.raw_value" t-set="is_trust_account_flag"/>
                 <div class="col-xs-4 o_kanban_card_manage_section o_kanban_manage_new">
-                    <t t-value="record.is_trust_account.raw_value" t-set="is_trust_account_flag"/>
                     <div class="o_kanban_card_manage_title">
                         <span>New</span>
                     </div>
+
+                    <!-- If is a trust account -->
+                    <t t-if="is_trust_account_flag">
+                        <t t-if="!record.trust_checks_journal_id.raw_value">
+                            <div name="trust_operations">
+                                <a role="menuitem" type="object" name="open_collect_money_trust">Deposit trust funds</a>
+                                <a role="menuitem" type="object" name="open_spend_money_trust">Withdraw trust funds</a>
+                            </div>
+                        </t>
+                        <t t-if="record.trust_checks_journal_id.raw_value">
+                            <div name="trust_operations">
+                                <a role="menuitem" type="object" name="open_collect_passthrough_money_trust">Deposit trust funds</a>
+                                <a role="menuitem" type="object" name="open_collect_money_trust">View trust funds</a>
+                            </div>
+                        </t>
+                    </t>
+
+                    <!-- If it is not a trust account -->
                     <t t-if="is_trust_account_flag != true">
                         <div name="bank_cash_commands">
                             <t t-if="journal_type == 'bank'">
@@ -37,24 +97,40 @@
                             <a type="object" name="open_transfer_money">Internal Transfer</a>
                         </div>
                     </t>
+                </div>
+            </xpath>
 
+            <!-- Reconciliation tab -->
+            <xpath expr="//div[hasclass('o_kanban_manage_reconciliation')]" position="replace">
+                <t t-value="record.is_trust_account.raw_value" t-set="is_trust_account_flag"/>
+                <div class="col-xs-4 o_kanban_card_manage_section o_kanban_manage_reconciliation">
+                    <div class="o_kanban_card_manage_title">
+                        <span>Reconciliation</span>
+                    </div>
+
+                    <!-- If is a trust account -->
                     <t t-if="is_trust_account_flag">
-                        <t t-if="!record.trust_checks_journal_id.raw_value">
-                            <div name="trust_operations">
-                                <a role="menuitem" type="object" name="open_collect_money_trust">Deposit trust funds</a>
-                                <a role="menuitem" type="object" name="open_spend_money_trust">Withdraw trust funds</a>
-                            </div>
-                        </t>
-                        <t t-if="record.trust_checks_journal_id.raw_value">
-                            <div name="trust_operations">
-                                <a role="menuitem" type="object" name="open_collect_passthrough_money_trust">Deposit trust funds</a>
-                                <a role="menuitem" type="object" name="open_collect_money_trust">View trust funds</a>
-                            </div>
-                        </t>
+                    </t>
 
+                    <!-- If it is not a trust account -->
+                    <t t-if="is_trust_account_flag != true">
+                        <div>
+                            <a t-if="dashboard.number_to_reconcile > 0" type="object" name="action_open_reconcile">
+                                Reconcile
+                            </a>
+                            <span t-if="dashboard.number_to_reconcile == 0" class="text-muted">Nothing to Reconcile
+                            </span>
+                        </div>
+                        <div>
+                            <a type="object" name="open_action_with_context"
+                               context="{'action_name': 'action_account_reconcile_model', 'use_domain': True}"
+                               groups="account.group_account_manager">Reconciliation Models
+                            </a>
+                        </div>
                     </t>
                 </div>
             </xpath>
+
         </field>
     </record>
 
@@ -108,16 +184,5 @@
             </tree>
         </field>
     </record>
-
-<!--    <record id="view_account_payment_invoice_form_inherited" model="ir.ui.view">-->
-<!--        <field name="name">account.payment.invoice.form.inherited</field>-->
-<!--        <field name="model">account.payment</field>-->
-<!--        <field name="inherit_id" ref="account.view_account_payment_invoice_form" />-->
-<!--        <field name="arch" type="xml">-->
-<!--            <xpath expr="//field[@name='journal_id']" position="replace">-->
-<!--                <field name="journal_id" widget="selection" domain="['|',('is_trust_account','=',False),'&amp;amp;',('is_trust_account', '=', True),('trust_payment_journal_id','!=',False),('at_least_one_inbound','=',True),('type','in',('bank', 'cash'))]"/>-->
-<!--            </xpath>-->
-<!--        </field>-->
-<!--    </record>-->
-
+    
 </odoo>
