@@ -48,7 +48,7 @@ class AccountJournal(models.Model):
     @api.multi
     def open_spend_money_trust(self):
         action = self.open_payments_action('outbound')
-        action['context'].update({'trust_action': True})
+        action['context'].update({'trust_action': True, 'default_partner_type': 'customer'})
         return action
 
     @api.multi

@@ -64,15 +64,15 @@
                     <!-- If is a trust account -->
                     <t t-if="is_trust_account_flag">
                         <t t-if="!record.trust_checks_journal_id.raw_value">
-                            <div name="trust_operations">
+                            <div name="trust_operations_passthrough">
                                 <a role="menuitem" type="object" name="open_collect_money_trust">Deposit trust funds</a>
-                                <a role="menuitem" type="object" name="open_spend_money_trust">Withdraw trust funds</a>
                             </div>
                         </t>
                         <t t-if="record.trust_checks_journal_id.raw_value">
                             <div name="trust_operations">
                                 <a role="menuitem" type="object" name="open_collect_passthrough_money_trust">Deposit trust funds</a>
                                 <a role="menuitem" type="object" name="open_collect_money_trust">View trust funds</a>
+                                <a role="menuitem" type="object" name="open_spend_money_trust">Withdraw trust funds</a>
                             </div>
                         </t>
                     </t>
@@ -184,5 +184,5 @@
             </tree>
         </field>
     </record>
-    
+
 </odoo>
