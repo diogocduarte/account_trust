@@ -142,16 +142,16 @@ class AccountPayment(models.Model):
     def _compute_destination_account_id(self):
         super(AccountPayment, self)._compute_destination_account_id()
         context = self._context
-        if not self.invoice_ids:
+        if not self.invoice_ids and self.payment_type == 'inbound':
 
-            # If it is a trust account type and has a passthrough account (undeposited funds)
-            if self.journal_id.is_trust_account and self.journal_id.trust_checks_journal_id:
+            # If it is a trust account type for passthrough (checks or cash)
+            if self.journal_id.is_trust_account and not self.journal_id.trust_checks_journal_id and not self.journal_id.trust_payment_journal_id:
+                self.destination_account_id = self.env.user.company_id.account_trust_id.id
+
+            # If it is a trust account type and has a passthrough account
+            elif self.journal_id.is_trust_account and self.journal_id.trust_checks_journal_id:
                 self.destination_account_id = self.journal_id.trust_checks_journal_id.default_debit_account_id.id
 
             # If it is a trust account type without passthrough (merchant)
-            elif self.journal_id.is_trust_account and self.journal_id.trust_payment_journal_id:
-                self.destination_account_id = self.env.user.company_id.account_trust_id.id
-
-            # If it is a trust account type and comes from invoice payment
-            elif self.journal_id.is_trust_account and not self.journal_id.trust_checks_journal_id and not self.journal_id.trust_payment_journal_id:
+            elif self.journal_id.is_trust_account and not self.journal_id.trust_checks_journal_id and self.journal_id.trust_payment_journal_id:
                 self.destination_account_id = self.env.user.company_id.account_trust_id.id
