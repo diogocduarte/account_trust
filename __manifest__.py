@@ -8,6 +8,10 @@
 Odoo Trust Fund / Escrow Accounting
 ===================================
 
+This module implements basic functionalites for managing trust accounts. 
+This featureset is very common in Law practice firms where lawyers need
+to maintain a correct CoA while managing client trusts.
+
     """,
     'website': 'http://www.odoogap.com',
     'depends': ['base', 'account_accountant'],

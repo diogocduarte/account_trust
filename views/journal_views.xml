@@ -13,10 +13,28 @@
                 <field name="trust_checks_journal_id"/>
                 <field name="trust_payment_journal_id"/>
             </xpath>
+            
+            <xpath expr="//div[hasclass('o_kanban_card_header_title')]/div[2]" position="replace">
+                <t t-value="record.is_trust_account.raw_value" t-set="is_trust_account_flag"/>
+
+                <!-- If is a trust account -->
+                <t t-if="is_trust_account_flag">
+                    <div class="fa fa-lock o_secondary" t-att-title="dashboard.title">
+                        <field name="type"/>
+                    </div>
+                </t>
+
+                <!-- If it is not a trust account -->
+                <t t-if="is_trust_account_flag != true">
+                    <div class="o_secondary" t-att-title="dashboard.title">
+                        <field name="type"/>
+                    </div>
+                </t>
+            </xpath>
 
             <!-- View tab -->
             <xpath expr="//div[hasclass('o_kanban_manage_view')]" position="replace">
-                <t t-value="record.is_trust_account.raw_value" t-set="is_trust_account_flag"/>
+
                 <div class="col-xs-4 o_kanban_card_manage_section o_kanban_manage_view">
                     <div class="o_kanban_card_manage_title">
                         <span>View</span>
@@ -73,7 +91,9 @@
                     <!-- If is a trust account - Trust Deposited Account Funds -->
                     <t t-if="is_trust_account_flag and record.trust_checks_journal_id.raw_value and record.trust_payment_journal_id.raw_value">
                         <div name="trust_operations">
-                            <a role="menuitem" type="object" name="open_collect_passthrough_money_trust">Deposit trust funds</a>
+                            <a role="menuitem" type="object" name="open_collect_passthrough_money_trust">Deposit trust
+                                funds
+                            </a>
                             <a role="menuitem" type="object" name="open_collect_money_trust">View trust funds</a>
                             <a role="menuitem" type="object" name="open_spend_money_trust">Withdraw trust funds</a>
                         </div>
@@ -152,7 +172,8 @@
                 <page string="Trust" attrs="{'invisible': [('type','not in',['bank','cash'])]}">
                     <group>
                         <field name="is_trust_account"/>
-                        <field name="trust_payment_journal_id" attrs="{'invisible': [('is_trust_account','=', False)]}"/>
+                        <field name="trust_payment_journal_id"
+                               attrs="{'invisible': [('is_trust_account','=', False)]}"/>
                         <field name="trust_checks_journal_id" attrs="{'invisible': [('is_trust_account','=', False)]}"/>
                     </group>
                 </page>
@@ -184,7 +205,8 @@
                 <field name="payment_method_id"/>
                 <field name="partner_id" string="Customer"/>
                 <field name="amount" sum="Amount"/>
-                <button name="deposit_check_cash" type="object" icon="fa-arrow-right" string="Deposit check or cash amount"/>
+                <button name="deposit_check_cash" type="object" icon="fa-arrow-right"
+                        string="Deposit check or cash amount"/>
                 <field name="state"/>
                 <field name="company_id" groups="base.group_multi_company"/>
                 <field name="currency_id" invisible="1"/>
