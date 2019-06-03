@@ -13,7 +13,7 @@
                 <field name="trust_checks_journal_id"/>
                 <field name="trust_payment_journal_id"/>
             </xpath>
-            
+
             <xpath expr="//div[hasclass('o_kanban_card_header_title')]/div[2]" position="replace">
                 <t t-value="record.is_trust_account.raw_value" t-set="is_trust_account_flag"/>
 
@@ -88,6 +88,7 @@
                             </div>
                         </t>
                     </t>
+
                     <!-- If is a trust account - Trust Deposited Account Funds -->
                     <t t-if="is_trust_account_flag and record.trust_checks_journal_id.raw_value and record.trust_payment_journal_id.raw_value">
                         <div name="trust_operations">
@@ -96,13 +97,17 @@
                             </a>
                             <a role="menuitem" type="object" name="open_collect_money_trust">View trust funds</a>
                             <a role="menuitem" type="object" name="open_spend_money_trust">Withdraw trust funds</a>
+                            <a type="object" name="open_transfer_money">Internal Transfer</a>
+
                         </div>
                     </t>
+
                     <!-- If is a trust account - Trust Merchant Account Funds -->
                     <t t-if="is_trust_account_flag and !record.trust_checks_journal_id.raw_value and record.trust_payment_journal_id.raw_value">
                         <div name="trust_operations">
                             <a role="menuitem" type="object" name="open_collect_money_trust">Deposit trust funds</a>
                             <a role="menuitem" type="object" name="open_spend_money_trust">Withdraw trust funds</a>
+                            <a type="object" name="open_transfer_money">Internal Transfer</a>
                         </div>
                     </t>
 
