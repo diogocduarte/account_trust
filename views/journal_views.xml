@@ -211,7 +211,7 @@
                 <field name="partner_id" string="Customer"/>
                 <field name="amount" sum="Amount"/>
                 <button name="deposit_check_cash" type="object" icon="fa-arrow-right"
-                        string="Deposit check or cash amount"/>
+                        string="Deposit check or cash amount" confirm="Are you sure you want to deposit this check?"/>
                 <field name="state"/>
                 <field name="company_id" groups="base.group_multi_company"/>
                 <field name="currency_id" invisible="1"/>
