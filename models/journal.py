@@ -68,8 +68,8 @@ class AccountPayment(models.Model):
             if self.invoice_ids:
                 domain = res['domain']['journal_id']
                 domain = expression.AND(
-                    [[('is_trust_account', '=', True), ('trust_payment_journal_id', '!=', False)], domain])  #
-                domain = expression.OR([[('is_trust_account', '=', False)], domain])  #
+                    [[('is_trust_account', '=', True), ('trust_payment_journal_id', '!=', False)], domain])
+                domain = expression.OR([[('is_trust_account', '=', False)], domain])
                 res['domain']['journal_id'] = domain
 
         return res
