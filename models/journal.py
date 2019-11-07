@@ -97,6 +97,20 @@ class AccountPayment(models.Model):
     is_deposited = fields.Boolean('Is Deposited?',
                                   help="This is a technical field, means the check is deposited on the passthrough account")
 
+    def _prepare_payment_values(self, origin_journal_id):
+        """This method is for overriding and passing additional values"""
+        return {
+            'amount': origin_journal_id.amount,
+            'company_id': origin_journal_id.company_id.id,
+            'partner_id': origin_journal_id.partner_id.id,
+            'partner_type': origin_journal_id.partner_type,
+            'payment_type': origin_journal_id.payment_type,
+            'payment_method_id': origin_journal_id.payment_method_id.id,
+            'project_id': origin_journal_id.project_id.id,
+            'payment_reference': origin_journal_id.payment_reference,
+            'payment_method_code': 'manual',
+        }
+
     @api.multi
     def deposit_check_cash(self):
         target_journal_id = self._context.get('target_journal_id')
@@ -104,19 +118,11 @@ class AccountPayment(models.Model):
             raise UserError(_("There is no target journal defined"))
         for jr in self:
             Payment = self.env['account.payment']
-            payment = Payment.create({
-                'amount': jr.amount,
-                'anva_trx_id': jr.anva_trx_id and jr.anva_trx_id.id or False,
-                'company_id': jr.company_id.id,
+            vals = self._prepare_payment_values(jr)
+            vals.update({
                 'journal_id': target_journal_id,
-                'partner_id': jr.partner_id.id,
-                'partner_type': jr.partner_type,
-                'payment_type': jr.payment_type,
-                'payment_method_id': jr.payment_method_id.id,
-                'project_id': jr.project_id.id,
-                'payment_reference': jr.payment_reference,
-                'payment_method_code': 'manual',
             })
+            payment = Payment.create(vals)
             payment.post()
             jr.is_deposited = True
 
