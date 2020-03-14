@@ -71,29 +71,8 @@ class AccountPayment(models.Model):
                     [[('is_trust_account', '=', True), ('trust_payment_journal_id', '!=', False)], domain])
                 domain = expression.OR([[('is_trust_account', '=', False)], domain])
                 res['domain']['journal_id'] = domain
-
         return res
 
-    @api.model
-    def _default_payment_type(self):
-        """ This routine will generate the selection """
-        is_trust_action = self._context.get('trust_action')
-
-        sel = [('outbound', 'Send Money'),
-               ('inbound', 'Receive Money'),
-               ('transfer', 'Internal Transfer'),
-               ('to_receivables', 'To Customer Invoices'),
-               ('to_payables', 'To Supplier Bills')]
-
-        if not is_trust_action:
-            sel.remove(('to_receivables', 'To Customer Invoices'))
-            sel.remove(('to_payables', 'To Supplier Bills'))
-        else:
-            sel.remove(('transfer', 'Internal Transfer'))
-
-        return sel
-
-    payment_type = fields.Selection('_default_payment_type', string='Payment Type', required=True)
     is_deposited = fields.Boolean('Is Deposited?',
                                   help="This is a technical field, means the check is deposited on the passthrough account")
 
