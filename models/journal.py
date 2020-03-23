@@ -115,8 +115,6 @@ class AccountPayment(models.Model):
                     if not (recv.journal_id.trust_payment_journal_id and recv.journal_id.is_trust_account):
                         raise UserError(_("You cannot use an undeposited checks/cash account for paying invoices."))
                 else:
-                    if not recv.partner_id:
-                        raise UserError(_("No partner is selected, please select one."))
                     if not recv.company_id.account_trust_id:
                         raise UserError(_("You need to set a trust account in company form.\n"
                                           "Please go to Settings >> Companies and chose an account."))
